@@ -14,9 +14,10 @@ import (
 
 // Define the job structure based on the API response
 type Job struct {
-	PositionID           string `json:"PositionID"`
+	//PositionID           string `json:"PositionID"`
 	JobTitle             string `json:"PositionTitle"`
 	Agency               string `json:"OrganizationName"`
+	PublicationStartDate string `json:"PublicationStartDate"`
 	ApplicationCloseDate string `json:"ApplicationCloseDate"`
 	PositionURI          string `json:"PositionURI"`
 	ControlID            string `json:"MatchedObjectId"`
@@ -52,6 +53,9 @@ func main() {
 	q.Add("Keyword", "CYBER")
 	q.Add("SortField", "opendate")
 	q.Add("ResultsPerPage", "500")
+	// Remove for all results instead of this week
+	q.Add("DatePosted", "7")
+
 	req.URL.RawQuery = q.Encode()
 
 	// Perform the API request
@@ -71,14 +75,15 @@ func main() {
 	// Prepare and display job listings in a table
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Position ID", "Title", "Agency", "Close Date", "Link"})
+	t.AppendHeader(table.Row{"Title", "Agency", "Open Date", "Close Date", "Link"})
 
 	for _, item := range apiResp.SearchResult.SearchResultItems {
 		job := item.MatchedObjectDescriptor
 		t.AppendRow(table.Row{
-			job.PositionID,
+			//job.PositionID,
 			job.JobTitle,
 			job.Agency,
+			job.PublicationStartDate,
 			job.ApplicationCloseDate,
 			job.PositionURI,
 		})
