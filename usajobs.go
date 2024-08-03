@@ -1,24 +1,25 @@
 package main
 
 import (
-	"context"
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 // Define the job structure based on the API response
 type Job struct {
-	JobTitle  string `json:"PositionTitle"`
-	Agency    string `json:"OrganizationName"`
-	OpenDate  string `json:"PublicationStartDate"`
-	Link      string `json:"ApplyURI"`
-	ControlID string `json:"MatchedObjectId"`
+	PositionID           string `json:"PositionID"`
+	JobTitle             string `json:"PositionTitle"`
+	Agency               string `json:"OrganizationName"`
+	ApplicationCloseDate string `json:"ApplicationCloseDate"`
+	PositionURI          string `json:"PositionURI"`
+	ControlID            string `json:"MatchedObjectId"`
 }
 
 type APIResponse struct {
@@ -29,25 +30,14 @@ type APIResponse struct {
 	} `json:"SearchResult"`
 }
 
-var ctx = context.Background()
-
 func main() {
-	// Retrieve email and API key from environment variables
-	email := os.Getenv("USAJOBS_EMAIL")
-	apiKey := os.Getenv("USAJOBS_API_KEY")
-
-	if email == "" || apiKey == "" {
-		log.Fatal("Environment variables USAJOBS_EMAIL and USAJOBS_API_KEY must be set")
-	}
-
-	// Connect to Redis
-	rdb := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379", // Adjust this if your Redis server is running elsewhere
-		DB:   0,                // Use default DB
-	})
+	// Retrieve credentials from environment variables or prompt the user
+	email, apiKey := getCredentials()
 
 	// Set up the API request
 	apiURL := "https://data.usajobs.gov/api/search"
+
+	// Create the HTTP request
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		log.Fatalf("Failed to create request: %v", err)
@@ -70,24 +60,50 @@ func main() {
 	}
 	defer resp.Body.Close()
 
-	// Read and parse the JSON response
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalf("Failed to read response body: %v", err)
-	}
-
+	// Parse the JSON response
 	var apiResp APIResponse
-	if err := json.Unmarshal(body, &apiResp); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
 		log.Fatalf("Failed to parse JSON response: %v", err)
 	}
 
-	// Process and store job listings
+	// Prepare and display job listings in a table
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Position ID", "Title", "Agency", "Close Date", "Link"})
+
 	for _, item := range apiResp.SearchResult.SearchResultItems {
 		job := item.MatchedObjectDescriptor
-		if err := rdb.Get(ctx, job.ControlID).Err(); err == redis.Nil {
-			jobInfo := fmt.Sprintf("Title: %s, Agency: %s, Open Date: %s, Link: %s", job.JobTitle, job.Agency, job.OpenDate, job.Link)
-			rdb.Set(ctx, job.ControlID, jobInfo, 0)
-			fmt.Println(jobInfo)
+		t.AppendRow(table.Row{
+			job.PositionID,
+			job.JobTitle,
+			job.Agency,
+			job.ApplicationCloseDate,
+			job.PositionURI,
+		})
+	}
+	t.Render()
+}
+
+// getCredentials retrieves credentials from environment variables or prompts the user
+func getCredentials() (string, string) {
+	email := os.Getenv("USAJOBS_EMAIL")
+	apiKey := os.Getenv("USAJOBS_API_KEY")
+
+	if email == "" || apiKey == "" {
+		reader := bufio.NewReader(os.Stdin)
+
+		if email == "" {
+			fmt.Print("Enter your USAJobs Email: ")
+			email, _ = reader.ReadString('\n')
+			email = strings.TrimSpace(email)
+		}
+
+		if apiKey == "" {
+			fmt.Print("Enter your USAJobs API Key: ")
+			apiKey, _ = reader.ReadString('\n')
+			apiKey = strings.TrimSpace(apiKey)
 		}
 	}
+
+	return email, apiKey
 }
