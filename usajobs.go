@@ -50,6 +50,8 @@ func main() {
 	// Add query parameters
 	q := req.URL.Query()
 	q.Add("Keyword", "CYBER")
+	q.Add("SortField", "opendate")
+	q.Add("ResultsPerPage", "500")
 	req.URL.RawQuery = q.Encode()
 
 	// Perform the API request
