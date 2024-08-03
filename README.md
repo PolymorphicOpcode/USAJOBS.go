@@ -3,14 +3,17 @@
 
 ## Unix
 
+```bash
 export USAJOBS_API_KEY="your-api-key-here"
+
 export USAJOBS_EMAIL="your-email@example.com"
-
+```
 ## Windows
-
+```powershell
 $env:USAJOBS_API_KEY="your-api-key-here"
-$env:USAJOBS_EMAIL="your-email@example.com"
 
+$env:USAJOBS_EMAIL="your-email@example.com"
+```
 ### Usage
 
 ```bash
