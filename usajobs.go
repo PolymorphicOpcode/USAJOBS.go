@@ -50,8 +50,9 @@ func main() {
 
 	// Add query parameters
 	q := req.URL.Query()
-	q.Add("Keyword", "CYBER")
+	q.Add("HiringPath", "student")
 	q.Add("SortField", "opendate")
+	q.Add("SortDirection", "desc")
 	q.Add("ResultsPerPage", "500")
 	// Remove for all results instead of this week
 	q.Add("DatePosted", "7")
@@ -75,15 +76,15 @@ func main() {
 	// Prepare and display job listings in a table
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Title", "Agency", "Open Date", "Close Date", "Link"})
+	t.AppendHeader(table.Row{"Open Date", "Title", "Agency", "Close Date", "Link"})
 
 	for _, item := range apiResp.SearchResult.SearchResultItems {
 		job := item.MatchedObjectDescriptor
 		t.AppendRow(table.Row{
 			//job.PositionID,
+			job.PublicationStartDate,
 			job.JobTitle,
 			job.Agency,
-			job.PublicationStartDate,
 			job.ApplicationCloseDate,
 			job.PositionURI,
 		})
